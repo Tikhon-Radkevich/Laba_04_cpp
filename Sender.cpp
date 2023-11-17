@@ -52,11 +52,11 @@ int main(int argc, char* argv[]) {
 void processMessages(const std::string& file_name, HANDLE hStartEvent, HANDLE hInputReadySemaphore, HANDLE hOutputReadySemaphore, HANDLE hMutex) {
     std::fstream file;
     cout << "Print 1 to write message;\nInput 0 to exit process\n";
-    int key;
+    std::string key;
     cin >> key;
 
     while (true) {
-        if (key == 1) {
+        if (key == "1") {
             WaitForSingleObject(hMutex, INFINITE);
             file.open(file_name, std::ios::out | std::ios::app);
 
@@ -64,16 +64,16 @@ void processMessages(const std::string& file_name, HANDLE hStartEvent, HANDLE hI
             cout << "Type in message: ";
             cin >> msg;
 
-            char message[20];
+            char message[21];
             for (int i = 0; i < msg.length(); i++) {
                 message[i] = msg[i];
             }
 
-            for (int i = msg.length(); i < 20; i++) {
+            for (int i = msg.length(); i < 21; i++) {
                 message[i] = '\0';
             }
 
-            message[19] = '\n';
+            message[20] = '\n';
             ReleaseMutex(hMutex);
             ReleaseSemaphore(hOutputReadySemaphore, 1, NULL);
 
@@ -84,11 +84,11 @@ void processMessages(const std::string& file_name, HANDLE hStartEvent, HANDLE hI
                 ReleaseSemaphore(hOutputReadySemaphore, 1, NULL);
                 ReleaseSemaphore(hInputReadySemaphore, 1, NULL);
 
-                for (int i = 0; i < 20; i++) {
+                for (int i = 0; i < 21; i++) {
                     file << message[i];
                 }
             } else {
-                for (int i = 0; i < 20; i++) {
+                for (int i = 0; i < 21; i++) {
                     file << message[i];
                 }
             }
@@ -98,12 +98,12 @@ void processMessages(const std::string& file_name, HANDLE hStartEvent, HANDLE hI
             cin >> key;
         }
 
-        if (key != 0 && key != 1) {
+        if (key != "0" && key != "1") {
             cout << "\nIncorrect value!\nInput 1 to write message;\nInput 0 to exit process\n";
             cin >> key;
         }
 
-        if (key == 0) {
+        if (key == "0") {
             cout << "Process ended.";
             break;
         }
