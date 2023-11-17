@@ -1,8 +1,12 @@
 #include <fstream>
 #include <iostream>
 #include <windows.h>
-#include <conio.h>
 #include <string>
+
+
+void CreateSenderProcesses(const std::string& file_name, int number_of_senders, HANDLE* hEventStarted);
+
+void HandleMessages(const std::string& file_name, HANDLE hInputReadySemaphore, HANDLE hOutputReadySemaphore, HANDLE hMutex);
 
 int main() {
     std::string file_name;
@@ -11,14 +15,14 @@ int main() {
     int number_of_senders;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
-    LPWSTR lpwstrSenderProcessCommandLine;
+
     std::cout << "Input binary file name:\n";
     std::cin >> file_name;
     std::cout << "Input number of notes:\n";
     std::cin >> number_of_notes;
     file.open(file_name, std::ios::out);
     file.close();
-   
+
     std::cout << "Input number of Sender Processes:\n";
     std::cin >> number_of_senders;
 
@@ -31,12 +35,29 @@ int main() {
     HANDLE hMutex = CreateMutex(NULL, 0, "mut ex");
     HANDLE* hEventStarted = new HANDLE[number_of_senders];
 
-    for (int i = 0; i < number_of_senders; ++i)
-    {
-        // std::string sender_cmd = "Sender.exe " + file_name;
-        // std::wstring converting_sender_to_lpwstr = std::wstring(sender_cmd.begin(), sender_cmd.end());
-        // lpwstrSenderProcessCommandLine = &converting_sender_to_lpwstr[0];
+    CreateSenderProcesses(file_name, number_of_senders, hEventStarted);
 
+    WaitForMultipleObjects(number_of_senders, hEventStarted, TRUE, INFINITE);
+    ReleaseMutex(hMutex);
+
+    HandleMessages(file_name, hInputReadySemaphore, hOutputReadySemaphore, hMutex);
+
+    CloseHandle(hInputReadySemaphore);
+    CloseHandle(hOutputReadySemaphore);
+    for (int i = 0; i < number_of_senders; i++) {
+        CloseHandle(hEventStarted[i]);
+    }
+
+    delete[] hEventStarted;
+
+    return 0;
+}
+
+void CreateSenderProcesses(const std::string& file_name, int number_of_senders, HANDLE* hEventStarted) {
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+
+    for (int i = 0; i < number_of_senders; ++i) {
         std::string sender_cmd = "Sender.exe " + file_name;
         LPSTR lpwstrSenderProcessCommandLine = const_cast<LPSTR>(sender_cmd.c_str());
 
@@ -44,21 +65,22 @@ int main() {
         si.cb = sizeof(STARTUPINFO);
         if (!CreateProcess(NULL, lpwstrSenderProcessCommandLine, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
             std::cout << "The Sender Process is not started.\n";
-            return GetLastError();
+            exit(GetLastError());
         }
         hEventStarted[i] = CreateEvent(NULL, FALSE, FALSE, "Process Started");
         if (hEventStarted[i] == NULL)
-            return GetLastError();
+            exit(GetLastError());
         CloseHandle(pi.hProcess);
     }
+}
 
-    WaitForMultipleObjects(number_of_senders, hEventStarted, TRUE, INFINITE);
-    ReleaseMutex(hMutex);
+void HandleMessages(const std::string& file_name, HANDLE hInputReadySemaphore, HANDLE hOutputReadySemaphore, HANDLE hMutex) {
+    std::fstream file;
     std::cout << "\nInput 1 to read message;\nInput 0 to exit process\n";
     int key;
-    int counter = 0;
     std::cin >> key;
     file.open(file_name, std::ios::in);
+
     while (true) {
         if (key == 1) {
             std::string message;
@@ -68,7 +90,6 @@ int main() {
             std::cout << message;
             ReleaseSemaphore(hOutputReadySemaphore, 1, NULL);
             ReleaseMutex(hMutex);
-            //file.close();
             std::cout << "\nInput 1 to read message;\nInput 0 to exit process\n";
             std::cin >> key;
         }
@@ -81,12 +102,5 @@ int main() {
             break;
         }
     }
-    CloseHandle(hInputReadySemaphore);
-    CloseHandle(hOutputReadySemaphore);
-    for (int i = 0; i < number_of_senders; i++)
-    {
-        CloseHandle(hEventStarted[i]);
-    }
-
-    return 0;
+    file.close();
 }
