@@ -19,19 +19,19 @@ int main(int argc, char* argv[]) {
 
     std::string file_name = argv[1];
     std::fstream file;
-    HANDLE hStartEvent = OpenEvent(EVENT_MODIFY_STATE, FALSE, "Process Started");
+    HANDLE hStartEvent = OpenEvent(EVENT_MODIFY_STATE, FALSE, "StartPocess");
 
     if (hStartEvent == NULL) {
-        cout << "Open event failed. \nInput any char to exit.\n";
+        cout << "Open event failed. \nPress any key to exit.\n";
         cin.get();
         return GetLastError();
     }
 
-    HANDLE hInputReadySemaphore = OpenSemaphore(EVENT_ALL_ACCESS, FALSE, "Input Semaphore started");
+    HANDLE hInputReadySemaphore = OpenSemaphore(EVENT_ALL_ACCESS, FALSE, "EnterSemaphoreStarted");
     if (hInputReadySemaphore == NULL)
         return GetLastError();
 
-    HANDLE hOutputReadySemaphore = OpenSemaphore(EVENT_ALL_ACCESS, FALSE, "Output Semaphore started");
+    HANDLE hOutputReadySemaphore = OpenSemaphore(EVENT_ALL_ACCESS, FALSE, "OutputSemaphoreStarted");
     if (hOutputReadySemaphore == NULL)
         return GetLastError();
 
@@ -61,7 +61,7 @@ void processMessages(const std::string& file_name, HANDLE hStartEvent, HANDLE hI
             file.open(file_name, std::ios::out | std::ios::app);
 
             std::string msg;
-            cout << "Input message to add\n";
+            cout << "Type in message: ";
             cin >> msg;
 
             char message[20];
@@ -78,7 +78,7 @@ void processMessages(const std::string& file_name, HANDLE hStartEvent, HANDLE hI
             ReleaseSemaphore(hOutputReadySemaphore, 1, NULL);
 
             if (ReleaseSemaphore(hInputReadySemaphore, 1, NULL) != 1) {
-                std::cout << "file is full";
+                cout << "you have exceeded the number of messages!";
                 ReleaseSemaphore(hOutputReadySemaphore, 1, NULL);
                 WaitForSingleObject(hOutputReadySemaphore, INFINITE);
                 ReleaseSemaphore(hOutputReadySemaphore, 1, NULL);

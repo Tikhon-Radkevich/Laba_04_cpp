@@ -4,6 +4,10 @@
 #include <string>
 
 
+using std::cout;
+using std::cin;
+
+
 void CreateSenderProcesses(const std::string& file_name, int number_of_senders, HANDLE* hEventStarted);
 
 void HandleMessages(const std::string& file_name, HANDLE hInputReadySemaphore, HANDLE hOutputReadySemaphore, HANDLE hMutex);
@@ -16,20 +20,20 @@ int main() {
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
 
-    std::cout << "Input binary file name:\n";
-    std::cin >> file_name;
-    std::cout << "Input number of notes:\n";
-    std::cin >> number_of_notes;
+    cout << "Enter binary file name: ";
+    cin >> file_name;
+    cout << "Enter number of notes: ";
+    cin >> number_of_notes;
     file.open(file_name, std::ios::out);
     file.close();
 
-    std::cout << "Input number of Sender Processes:\n";
-    std::cin >> number_of_senders;
+    cout << "Enter number of Sender Processes: ";
+    cin >> number_of_senders;
 
-    HANDLE hInputReadySemaphore = CreateSemaphore(NULL, 0, number_of_notes, "Input Semaphore started");
+    HANDLE hInputReadySemaphore = CreateSemaphore(NULL, 0, number_of_notes, "EnterSemaphoreStarted");
     if (hInputReadySemaphore == NULL)
         return GetLastError();
-    HANDLE hOutputReadySemaphore = CreateSemaphore(NULL, 0, number_of_notes, "Output Semaphore started");
+    HANDLE hOutputReadySemaphore = CreateSemaphore(NULL, 0, number_of_notes, "OutputSemaphoreStarted");
     if (hOutputReadySemaphore == NULL)
         return GetLastError();
     HANDLE hMutex = CreateMutex(NULL, 0, "mut ex");
@@ -64,10 +68,10 @@ void CreateSenderProcesses(const std::string& file_name, int number_of_senders, 
         ZeroMemory(&si, sizeof(STARTUPINFO));
         si.cb = sizeof(STARTUPINFO);
         if (!CreateProcess(NULL, lpwstrSenderProcessCommandLine, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
-            std::cout << "The Sender Process is not started.\n";
+            cout << "The Sender Process is not started.\n";
             exit(GetLastError());
         }
-        hEventStarted[i] = CreateEvent(NULL, FALSE, FALSE, "Process Started");
+        hEventStarted[i] = CreateEvent(NULL, FALSE, FALSE, "StartPocess");
         if (hEventStarted[i] == NULL)
             exit(GetLastError());
         CloseHandle(pi.hProcess);
@@ -76,9 +80,9 @@ void CreateSenderProcesses(const std::string& file_name, int number_of_senders, 
 
 void HandleMessages(const std::string& file_name, HANDLE hInputReadySemaphore, HANDLE hOutputReadySemaphore, HANDLE hMutex) {
     std::fstream file;
-    std::cout << "\nInput 1 to read message;\nInput 0 to exit process\n";
+    cout << "\nEnter 1 to read message;\nEnter 0 to exit \n";
     int key;
-    std::cin >> key;
+    cin >> key;
     file.open(file_name, std::ios::in);
 
     while (true) {
@@ -87,18 +91,18 @@ void HandleMessages(const std::string& file_name, HANDLE hInputReadySemaphore, H
             WaitForSingleObject(hInputReadySemaphore, INFINITE);
             WaitForSingleObject(hMutex, INFINITE);
             std::getline(file, message);
-            std::cout << message;
+            cout << message;
             ReleaseSemaphore(hOutputReadySemaphore, 1, NULL);
             ReleaseMutex(hMutex);
-            std::cout << "\nInput 1 to read message;\nInput 0 to exit process\n";
-            std::cin >> key;
+            cout << "\nEnter 1 to read message; \nEnter 0 to exit \n";
+            cin >> key;
         }
         if (key != 0 && key != 1) {
-            std::cout << "\nIncorrect value!\nInput 1 to read message;\nInput 0 to exit process\n";
-            std::cin >> key;
+            cout << "\nValue Error!\nEnter 1 to read message;\nEnter 0 to exit \n";
+            cin >> key;
         }
         if (key == 0) {
-            std::cout << "Process ended.";
+            cout << "Process ended";
             break;
         }
     }
